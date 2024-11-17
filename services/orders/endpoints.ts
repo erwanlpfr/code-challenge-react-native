@@ -4,9 +4,14 @@ type PostOrdersData = {
   total: number;
 };
 
-type PostOrderResponse = {
+export interface Order {
+  amount_total: number;
+  basket_id: string;
+  created_at: string;
   id: string;
-};
+  status: string;
+  user_id: string;
+}
 
 export const postOrder = async (data: PostOrdersData) => {
   const response = await kanplaFetch("orders", {
@@ -17,7 +22,7 @@ export const postOrder = async (data: PostOrdersData) => {
     body: JSON.stringify(data),
   });
 
-  const order = (await response.json()) as PostOrderResponse;
+  const order = (await response.json()) as Order;
 
   return order;
 };
@@ -38,15 +43,6 @@ export const patchOrder = async (id: string, data: PatchOrderData) => {
 
   return order;
 };
-
-interface Order {
-  amount_total: number;
-  basket_id: string;
-  created_at: string;
-  id: string;
-  status: string;
-  user_id: string;
-}
 
 export const getOrders = async () => {
   const response = await kanplaFetch("orders");

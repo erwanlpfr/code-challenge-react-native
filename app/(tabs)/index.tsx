@@ -5,21 +5,21 @@ import { PressableButton } from "@/components/button/pressable-button";
 import { ProductCard } from "@/components/product/product-card";
 import { ProductCardLoading } from "@/components/product/product-card-loading";
 import { useBasket } from "@/hooks/basket/use-basket";
+import { useOrder } from "@/hooks/orders/use-order";
 import { useNotifications } from "@/hooks/use-notifications";
 import { getErrorMessage } from "@/libs/errors";
 import { randomString } from "@/libs/random";
-import { patchOrder, postOrder } from "@/services/orders/endpoints";
+import { patchOrder } from "@/services/orders/endpoints";
 import { postPayment } from "@/services/payments/endpoints";
 import { getProducts } from "@/services/products/endpoints";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import React, { useState } from "react";
+import React from "react";
 import { Button, FlatList, StyleSheet, Text } from "react-native";
 
 export default function PosScreen() {
-  const [orderId, setOrderId] = useState<string | null>(null);
-
   const { basket, add, reset, remove } = useBasket();
   const { show } = useNotifications();
+  const { order, create, reset: resetOrder, isPending } = useOrder();
 
   const {
     data: products,
@@ -29,21 +29,6 @@ export default function PosScreen() {
   } = useQuery({
     queryKey: [getProducts.name],
     queryFn: getProducts,
-  });
-
-  const { mutateAsync: createOrder } = useMutation({
-    mutationFn: () =>
-      postOrder({
-        total: basket.reduce((acc, { product }) => acc + product.price_unit, 0),
-      }),
-    onSuccess: (order) => {
-      setOrderId(order.id);
-    },
-    onError: (error) => {
-      const message = getErrorMessage(error);
-      show(message.title, message.message, "error");
-      setOrderId(null);
-    },
   });
 
   const { mutateAsync: payOrder } = useMutation({
@@ -59,7 +44,7 @@ export default function PosScreen() {
     },
     onSuccess: () => {
       reset();
-      setOrderId(null);
+      resetOrder();
     },
     onError: (error) => {
       const message = getErrorMessage(error);
@@ -128,20 +113,28 @@ export default function PosScreen() {
           Total: ${basket.reduce((acc, item) => acc + item.product.price_unit, 0).toFixed(2)}
         </ThemedText>
 
-        {orderId ? (
+        {order ? (
           <>
             <PressableButton
               title="Cancel Order"
               style={styles.cancelOrderButton}
-              onPress={() => setOrderId(null)}
+              onPress={() => {
+                resetOrder();
+                reset();
+              }}
             />
-            <PressableButton title="Pay" onPress={() => payOrder(orderId)} />
+            <PressableButton
+              title={order.offline ? "Offline Mode" : "Pay"}
+              onPress={() => !order.offline && payOrder(order.order.id)}
+              disabled={order.offline}
+            />
           </>
         ) : (
           <PressableButton
             title="Create Order"
-            onPress={() => createOrder()}
+            onPress={() => create(basket.map((item) => item.product))}
             disabled={basket.length === 0}
+            loading={isPending}
           />
         )}
       </ThemedView>
