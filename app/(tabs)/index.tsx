@@ -1,27 +1,57 @@
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { ProductCard } from "@/components/product/product-card";
+import { useNotifications } from "@/hooks/use-notifications";
+import { patchOrder, postOrder } from "@/services/orders/endpoints";
+import { postPayment } from "@/services/payments/endpoints";
 import { type Product, getProducts } from "@/services/products/endpoints";
-import { useQuery } from "@tanstack/react-query";
-import React, { useCallback, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import React, { useState } from "react";
 import { FlatList, StyleSheet, Text, TouchableOpacity } from "react-native";
 
 export default function PosScreen() {
   const [basket, setBasket] = useState<Product[]>([]);
   const [orderId, setOrderId] = useState<string | null>(null);
 
+  const { show } = useNotifications();
+
   const { data: products } = useQuery({
     queryKey: [getProducts.name],
     queryFn: getProducts,
   });
 
-  const createOrder = useCallback(() => {
-    // postOrdersMutation.mutate({
-    //   total: basket.reduce((acc, item) => acc + item.price_unit, 0),
-    // });
-  }, [basket]);
+  const { mutate: createOrder } = useMutation({
+    mutationFn: () =>
+      postOrder({
+        total: basket.reduce((acc, item) => acc + item.price_unit, 0),
+      }),
+    onSuccess: (order) => {
+      setOrderId(order.id);
+    },
+    onError: (error) => {
+      show(error.message, "Something went wrong", "error");
+    },
+  });
 
-  const payOrder = useCallback(() => {}, [orderId, basket]);
+  const { mutate: payOrder } = useMutation({
+    mutationFn: async (orderId: string) => {
+      const payment = await postPayment({
+        order_id: orderId,
+        amount: basket.reduce((acc, item) => acc + item.price_unit, 0),
+      });
+
+      await patchOrder(payment.order_id, {
+        status: "completed",
+      });
+    },
+    onSuccess: () => {
+      setBasket([]);
+      setOrderId(null);
+    },
+    onError: (error) => {
+      show(error.message, "Something went wrong", "error");
+    },
+  });
 
   return (
     <ThemedView style={styles.container}>
@@ -47,7 +77,7 @@ export default function PosScreen() {
           Basket
         </ThemedText>
 
-        {basket.map((item, index) => (
+        {basket.map((item) => (
           <ThemedView key={item.id} style={styles.basketItem}>
             <Text style={styles.text}>{item.name}</Text>
             <Text style={styles.text}>${item.price}</Text>
@@ -55,16 +85,16 @@ export default function PosScreen() {
         ))}
 
         <ThemedText style={styles.text}>
-          Total: ${basket.reduce((acc, item) => acc + item.price_unit, 0)}
+          Total: ${basket.reduce((acc, item) => acc + item.price_unit, 0).toFixed(2)}
         </ThemedText>
 
-        <TouchableOpacity style={styles.button} onPress={createOrder}>
+        <TouchableOpacity style={styles.button} onPress={() => createOrder()}>
           <ThemedText style={styles.buttonText}>Create Order</ThemedText>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.button, !orderId && { backgroundColor: "#555" }]}
-          onPress={payOrder}
+          onPress={() => orderId && payOrder(orderId)}
           disabled={!orderId}
         >
           <ThemedText style={styles.buttonText}>Pay</ThemedText>

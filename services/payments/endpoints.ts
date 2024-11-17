@@ -9,7 +9,7 @@ type Order = {
   order_id: string;
 };
 
-export const patchPayment = async (data: PatchPaymentData) => {
+export const postPayment = async (data: PatchPaymentData) => {
   const response = await kanplaFetch("payments", {
     method: "POST",
     headers: {

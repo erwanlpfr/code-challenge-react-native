@@ -10,7 +10,7 @@ export const ProductCard = (props: Props) => {
   return (
     <TouchableOpacity style={styles.product} onPress={props.onPress}>
       <Text style={styles.text}>{props.name}</Text>
-      <Text style={styles.text}>${props.price}</Text>
+      <Text style={styles.text}>${props.price.toFixed(2)}</Text>
     </TouchableOpacity>
   );
 };

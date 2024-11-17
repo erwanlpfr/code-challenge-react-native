@@ -16,6 +16,7 @@ export const postOrder = async (data: PostOrdersData) => {
     },
     body: JSON.stringify(data),
   });
+
   const order = (await response.json()) as Order;
 
   return order;

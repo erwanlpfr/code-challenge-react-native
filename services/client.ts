@@ -1,4 +1,5 @@
 import { QueryClient } from "@tanstack/react-query";
+import { KanplaError } from "./errors";
 
 const KANPLA_API_KEY = process.env.EXPO_PUBLIC_KANPLA_API_KEY;
 
@@ -13,14 +14,23 @@ if (!KANPLA_API_KEY) {
  * @param options
  * @returns
  */
-export const kanplaFetch = (url: string, options?: RequestInit) => {
+export const kanplaFetch = async (url: string, options?: RequestInit) => {
   const headers = new Headers(options?.headers);
   headers.append("x-auth-user", KANPLA_API_KEY);
 
-  return fetch(`https://kanpla-code-challenge.up.railway.app/${url}`, {
-    headers,
+  const response = await fetch(`https://kanpla-code-challenge.up.railway.app/${url}`, {
     ...options,
+    headers,
   });
+
+  if (!response.ok) {
+    console.error(response);
+    const error = new KanplaError(response.statusText);
+    error.response = response;
+    throw error;
+  }
+
+  return response;
 };
 
 export const queryClient = new QueryClient();
