@@ -2,6 +2,7 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { ProductCard } from "@/components/product/product-card";
 import { useNotifications } from "@/hooks/use-notifications";
+import { getErrorMessage } from "@/libs/errors";
 import { patchOrder, postOrder } from "@/services/orders/endpoints";
 import { postPayment } from "@/services/payments/endpoints";
 import { type Product, getProducts } from "@/services/products/endpoints";
@@ -29,7 +30,8 @@ export default function PosScreen() {
       setOrderId(order.id);
     },
     onError: (error) => {
-      show(error.message, "Something went wrong", "error");
+      const message = getErrorMessage(error);
+      show(message.title, message.message, "error");
     },
   });
 
@@ -49,7 +51,8 @@ export default function PosScreen() {
       setOrderId(null);
     },
     onError: (error) => {
-      show(error.message, "Something went wrong", "error");
+      const message = getErrorMessage(error);
+      show(message.title, message.message, "error");
     },
   });
 
