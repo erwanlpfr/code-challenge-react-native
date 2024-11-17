@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback } from "react";
 import { Button, FlatList, StyleSheet, Text, useWindowDimensions } from "react-native";
 
 import { ThemedText } from "@/components/ThemedText";
@@ -8,6 +8,7 @@ import { OrderLoadingCard } from "@/components/orders/order-loading-card";
 import { randomString } from "@/libs/random";
 import { getOrders } from "@/services/orders/endpoints";
 import { useQuery } from "@tanstack/react-query";
+import { useFocusEffect } from "expo-router";
 
 export default function TabTwoScreen() {
   const { width } = useWindowDimensions();
@@ -21,6 +22,15 @@ export default function TabTwoScreen() {
     queryKey: [getOrders.name],
     queryFn: getOrders,
   });
+
+  /**
+   * Responsible for refetching the orders when the screen is focused.
+   */
+  useFocusEffect(
+    useCallback(() => {
+      ordersRefetch();
+    }, [ordersRefetch]),
+  );
 
   return (
     <ThemedView style={styles.container}>

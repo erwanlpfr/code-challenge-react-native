@@ -36,10 +36,13 @@ export const PressableButton = (props: Props) => {
       onPress={onPress}
       disabled={props.disabled || props.loading || internalLoading}
     >
-      {(props.loading || internalLoading) && <ActivityIndicator size="small" />}
-      <Text style={styles.buttonText} adjustsFontSizeToFit numberOfLines={1} ellipsizeMode="tail">
-        {props.title}
-      </Text>
+      {props.loading || internalLoading ? (
+        <ActivityIndicator size="small" />
+      ) : (
+        <Text style={styles.buttonText} adjustsFontSizeToFit numberOfLines={1} ellipsizeMode="tail">
+          {props.title}
+        </Text>
+      )}
     </Pressable>
   );
 };
