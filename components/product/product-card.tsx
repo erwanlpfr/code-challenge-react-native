@@ -1,4 +1,11 @@
-import { StyleSheet, Text, TouchableOpacity } from "react-native";
+import { useCallback } from "react";
+import { Pressable, StyleSheet, Text } from "react-native";
+import Animated, {
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 
 interface Props {
   name: string;
@@ -6,12 +13,33 @@ interface Props {
   onPress: () => void;
 }
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 export const ProductCard = (props: Props) => {
+  const progress = useSharedValue(0);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: interpolate(progress.value, [0, 1], [1, 1.2]) }],
+  }));
+
+  const onPressIn = useCallback(() => {
+    progress.value = withTiming(1);
+  }, [progress]);
+
+  const onPressOut = useCallback(() => {
+    progress.value = withTiming(0);
+  }, [progress]);
+
   return (
-    <TouchableOpacity style={styles.product} onPress={props.onPress}>
+    <AnimatedPressable
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      onPress={props.onPress}
+      style={[styles.product, animatedStyle]}
+    >
       <Text style={styles.text}>{props.name}</Text>
       <Text style={styles.text}>${props.price.toFixed(2)}</Text>
-    </TouchableOpacity>
+    </AnimatedPressable>
   );
 };
 
@@ -22,6 +50,7 @@ const styles = StyleSheet.create({
     padding: 10,
     backgroundColor: "#1e1e1e",
     alignItems: "center",
+    borderRadius: 5,
   },
   text: {
     color: "#ffffff",

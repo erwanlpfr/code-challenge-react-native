@@ -1,32 +1,37 @@
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
+import { BasketProduct } from "@/components/basket/basket-product";
+import { PressableButton } from "@/components/button/pressable-button";
 import { ProductCard } from "@/components/product/product-card";
+import { ProductCardLoading } from "@/components/product/product-card-loading";
 import { useBasket } from "@/hooks/basket/use-basket";
 import { useNotifications } from "@/hooks/use-notifications";
 import { getErrorMessage } from "@/libs/errors";
+import { randomString } from "@/libs/random";
 import { patchOrder, postOrder } from "@/services/orders/endpoints";
 import { postPayment } from "@/services/payments/endpoints";
 import { getProducts } from "@/services/products/endpoints";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import React, { useState } from "react";
-import { Button, FlatList, StyleSheet, Text, TouchableOpacity } from "react-native";
+import { Button, FlatList, StyleSheet, Text } from "react-native";
 
 export default function PosScreen() {
   const [orderId, setOrderId] = useState<string | null>(null);
 
-  const { basket, add, reset } = useBasket();
+  const { basket, add, reset, remove } = useBasket();
   const { show } = useNotifications();
 
   const {
     data: products,
     error: productsError,
     refetch: productsRefetch,
+    isLoading: productsLoading,
   } = useQuery({
     queryKey: [getProducts.name],
     queryFn: getProducts,
   });
 
-  const { mutate: createOrder } = useMutation({
+  const { mutateAsync: createOrder } = useMutation({
     mutationFn: () =>
       postOrder({
         total: basket.reduce((acc, { product }) => acc + product.price_unit, 0),
@@ -41,7 +46,7 @@ export default function PosScreen() {
     },
   });
 
-  const { mutate: payOrder } = useMutation({
+  const { mutateAsync: payOrder } = useMutation({
     mutationFn: async (orderId: string) => {
       const payment = await postPayment({
         order_id: orderId,
@@ -71,20 +76,33 @@ export default function PosScreen() {
             <Button title="Try again" onPress={() => productsRefetch()} />
           </>
         )}
-        <FlatList
-          data={products}
-          renderItem={({ item }) => {
-            return (
-              <ProductCard
-                name={item.name}
-                price={item.price_unit * (item.vat_rate + 1)}
-                onPress={() => add(item)}
-              />
-            );
-          }}
-          keyExtractor={(item) => item.id}
-          numColumns={2}
-        />
+        {products ? (
+          <FlatList
+            data={products}
+            onRefresh={() => productsRefetch()}
+            refreshing={productsLoading}
+            renderItem={({ item }) => {
+              return (
+                <ProductCard
+                  name={item.name}
+                  price={item.price_unit * (item.vat_rate + 1)}
+                  onPress={() => add(item)}
+                />
+              );
+            }}
+            keyExtractor={(item) => item.id}
+            numColumns={2}
+          />
+        ) : (
+          <FlatList
+            data={Array(9)
+              .fill(null)
+              .map(() => ({ id: randomString() }))}
+            renderItem={({ item }) => <ProductCardLoading key={item.id} />}
+            keyExtractor={(item) => item.id}
+            numColumns={2}
+          />
+        )}
       </ThemedView>
 
       <ThemedView style={styles.basket}>
@@ -92,28 +110,40 @@ export default function PosScreen() {
           Basket
         </ThemedText>
 
-        {basket.map((item) => (
-          <ThemedView key={item.id} style={styles.basketItem}>
-            <Text style={styles.text}>{item.product.name}</Text>
-            <Text style={styles.text}>${item.product.price_unit}</Text>
-          </ThemedView>
-        ))}
+        <FlatList
+          data={basket}
+          renderItem={({ item }) => (
+            <BasketProduct
+              key={item.id}
+              name={item.product.name}
+              price={item.product.price_unit}
+              onPress={() => remove(item.id)}
+            />
+          )}
+          keyExtractor={(item) => item.id}
+          numColumns={1}
+        />
 
         <ThemedText style={styles.text}>
           Total: ${basket.reduce((acc, item) => acc + item.product.price_unit, 0).toFixed(2)}
         </ThemedText>
 
-        <TouchableOpacity style={styles.button} onPress={() => createOrder()}>
-          <ThemedText style={styles.buttonText}>Create Order</ThemedText>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.button, !orderId && { backgroundColor: "#555" }]}
-          onPress={() => orderId && payOrder(orderId)}
-          disabled={!orderId}
-        >
-          <ThemedText style={styles.buttonText}>Pay</ThemedText>
-        </TouchableOpacity>
+        {orderId ? (
+          <>
+            <PressableButton
+              title="Cancel Order"
+              style={styles.cancelOrderButton}
+              onPress={() => setOrderId(null)}
+            />
+            <PressableButton title="Pay" onPress={() => payOrder(orderId)} />
+          </>
+        ) : (
+          <PressableButton
+            title="Create Order"
+            onPress={() => createOrder()}
+            disabled={basket.length === 0}
+          />
+        )}
       </ThemedView>
     </ThemedView>
   );
@@ -128,36 +158,15 @@ const styles = StyleSheet.create({
     flex: 2,
     padding: 10,
   },
-  product: {
-    flex: 1,
-    margin: 10,
-    padding: 10,
-    backgroundColor: "#1e1e1e",
-    alignItems: "center",
-  },
   basket: {
     flex: 1,
     padding: 10,
     backgroundColor: "#1e1e1e",
   },
-  basketItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginVertical: 5,
-    padding: 5,
-  },
   text: {
     color: "#ffffff",
   },
-  button: {
-    backgroundColor: "#173829",
-    padding: 10,
-    marginVertical: 10,
-    borderRadius: 5,
-    alignItems: "center",
-  },
-  buttonText: {
-    color: "#ffffff",
-    fontWeight: "bold",
+  cancelOrderButton: {
+    backgroundColor: "red",
   },
 });

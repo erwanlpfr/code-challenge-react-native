@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { StyleSheet } from "react-native";
+import { StyleSheet, Text } from "react-native";
 import Animated, {
   cancelAnimation,
   interpolate,
@@ -9,7 +9,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
-export const Product = () => {
+export const ProductCardLoading = () => {
   const progress = useSharedValue(0);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -17,7 +17,7 @@ export const Product = () => {
   }));
 
   useEffect(() => {
-    progress.value = withRepeat(withTiming(1, { duration: 1000 }), 1000, true);
+    progress.value = withRepeat(withTiming(1, { duration: 1250 }), -1, true);
 
     return () => {
       cancelAnimation(progress);
@@ -25,7 +25,12 @@ export const Product = () => {
     };
   }, [progress]);
 
-  return <Animated.View style={[styles.product, animatedStyle]} />;
+  return (
+    <Animated.View style={[styles.product, animatedStyle]}>
+      <Text />
+      <Text />
+    </Animated.View>
+  );
 };
 
 const styles = StyleSheet.create({
@@ -34,6 +39,6 @@ const styles = StyleSheet.create({
     margin: 10,
     padding: 10,
     backgroundColor: "#1e1e1e",
-    alignItems: "center",
+    borderRadius: 5,
   },
 });

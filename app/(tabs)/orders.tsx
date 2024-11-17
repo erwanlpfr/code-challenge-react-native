@@ -1,16 +1,22 @@
 import React from "react";
-import { Button, FlatList, StyleSheet, Text } from "react-native";
+import { Button, FlatList, StyleSheet, Text, useWindowDimensions } from "react-native";
 
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
+import { OrderCard } from "@/components/orders/order-card";
+import { OrderLoadingCard } from "@/components/orders/order-loading-card";
+import { randomString } from "@/libs/random";
 import { getOrders } from "@/services/orders/endpoints";
 import { useQuery } from "@tanstack/react-query";
 
 export default function TabTwoScreen() {
+  const { width } = useWindowDimensions();
+
   const {
     data: orders,
     error,
     refetch: ordersRefetch,
+    isLoading,
   } = useQuery({
     queryKey: [getOrders.name],
     queryFn: getOrders,
@@ -27,17 +33,35 @@ export default function TabTwoScreen() {
           <Button title="Try again" onPress={() => ordersRefetch()} />
         </>
       )}
-      <FlatList
-        data={orders}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <ThemedView style={styles.orderItem}>
-            <ThemedText>{item.id}</ThemedText>
-            <ThemedText>{item.created_at}</ThemedText>
-            <ThemedText>{item.amount}$</ThemedText>
-          </ThemedView>
-        )}
-      />
+
+      {orders ? (
+        <FlatList
+          // Changing numColumns on the fly is not supported
+          key={width > 600 ? 2 : 1}
+          data={orders}
+          keyExtractor={(item) => item.id}
+          onRefresh={() => ordersRefetch()}
+          refreshing={isLoading}
+          numColumns={width > 600 ? 2 : 1}
+          renderItem={({ item }) => (
+            <OrderCard
+              key={item.id}
+              id={item.id}
+              created_at={item.created_at}
+              amount={item.amount_total}
+              status={item.status}
+            />
+          )}
+        />
+      ) : (
+        <FlatList
+          data={Array(9)
+            .fill(null)
+            .map(() => ({ id: randomString() }))}
+          keyExtractor={(item) => item.id}
+          renderItem={() => <OrderLoadingCard />}
+        />
+      )}
     </ThemedView>
   );
 }
@@ -50,15 +74,5 @@ const styles = StyleSheet.create({
   titleContainer: {
     flexDirection: "row",
     gap: 8,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  orderItem: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ccc",
   },
 });
