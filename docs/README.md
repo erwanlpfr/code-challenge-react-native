@@ -93,6 +93,9 @@ Then, the `retry` function is called when the user is connected to the internet.
 ## What's next ?
 
 As a technical test, you can't go further than this.
+I've focused on abstrations but still by getting straight to the needed features. 
+Most of the features are splitted into hooks, libs and components to make it easier to understand.
+
 But as far we could go, an app needs to be more complex.
 Here, what I would do in case of a real app (from MVP to a real production app) :
 
