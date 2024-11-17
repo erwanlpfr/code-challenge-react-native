@@ -76,7 +76,7 @@ export default function PosScreen() {
             <Button title="Try again" onPress={() => productsRefetch()} />
           </>
         )}
-        {products && !productsLoading ? (
+        {products ? (
           <FlatList
             data={products}
             onRefresh={() => productsRefetch()}
