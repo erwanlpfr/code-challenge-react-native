@@ -40,9 +40,12 @@ export const patchOrder = async (id: string, data: PatchOrderData) => {
 };
 
 interface Order {
-  id: string;
+  amount_total: number;
+  basket_id: string;
   created_at: string;
-  amount: number;
+  id: string;
+  status: string;
+  user_id: string;
 }
 
 export const getOrders = async () => {
