@@ -24,7 +24,6 @@ export const kanplaFetch = async (url: string, options?: RequestInit) => {
   });
 
   if (!response.ok) {
-    console.error(response);
     const error = new KanplaError(response.statusText);
     error.response = response;
     throw error;

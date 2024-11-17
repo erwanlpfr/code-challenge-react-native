@@ -1,22 +1,27 @@
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { ProductCard } from "@/components/product/product-card";
+import { useBasket } from "@/hooks/basket/use-basket";
 import { useNotifications } from "@/hooks/use-notifications";
 import { getErrorMessage } from "@/libs/errors";
 import { patchOrder, postOrder } from "@/services/orders/endpoints";
 import { postPayment } from "@/services/payments/endpoints";
-import { type Product, getProducts } from "@/services/products/endpoints";
+import { getProducts } from "@/services/products/endpoints";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import React, { useState } from "react";
-import { FlatList, StyleSheet, Text, TouchableOpacity } from "react-native";
+import { Button, FlatList, StyleSheet, Text, TouchableOpacity } from "react-native";
 
 export default function PosScreen() {
-  const [basket, setBasket] = useState<Product[]>([]);
   const [orderId, setOrderId] = useState<string | null>(null);
 
+  const { basket, add, reset } = useBasket();
   const { show } = useNotifications();
 
-  const { data: products } = useQuery({
+  const {
+    data: products,
+    error: productsError,
+    refetch: productsRefetch,
+  } = useQuery({
     queryKey: [getProducts.name],
     queryFn: getProducts,
   });
@@ -24,7 +29,7 @@ export default function PosScreen() {
   const { mutate: createOrder } = useMutation({
     mutationFn: () =>
       postOrder({
-        total: basket.reduce((acc, item) => acc + item.price_unit, 0),
+        total: basket.reduce((acc, { product }) => acc + product.price_unit, 0),
       }),
     onSuccess: (order) => {
       setOrderId(order.id);
@@ -32,6 +37,7 @@ export default function PosScreen() {
     onError: (error) => {
       const message = getErrorMessage(error);
       show(message.title, message.message, "error");
+      setOrderId(null);
     },
   });
 
@@ -39,7 +45,7 @@ export default function PosScreen() {
     mutationFn: async (orderId: string) => {
       const payment = await postPayment({
         order_id: orderId,
-        amount: basket.reduce((acc, item) => acc + item.price_unit, 0),
+        amount: basket.reduce((acc, { product }) => acc + product.price_unit, 0),
       });
 
       await patchOrder(payment.order_id, {
@@ -47,7 +53,7 @@ export default function PosScreen() {
       });
     },
     onSuccess: () => {
-      setBasket([]);
+      reset();
       setOrderId(null);
     },
     onError: (error) => {
@@ -59,6 +65,12 @@ export default function PosScreen() {
   return (
     <ThemedView style={styles.container}>
       <ThemedView style={styles.productGrid}>
+        {productsError && (
+          <>
+            <Text>We are sorry, our service is currently unavailable.</Text>
+            <Button title="Try again" onPress={() => productsRefetch()} />
+          </>
+        )}
         <FlatList
           data={products}
           renderItem={({ item }) => {
@@ -66,7 +78,7 @@ export default function PosScreen() {
               <ProductCard
                 name={item.name}
                 price={item.price_unit * (item.vat_rate + 1)}
-                onPress={() => setBasket((prev) => [...prev, item])}
+                onPress={() => add(item)}
               />
             );
           }}
@@ -82,13 +94,13 @@ export default function PosScreen() {
 
         {basket.map((item) => (
           <ThemedView key={item.id} style={styles.basketItem}>
-            <Text style={styles.text}>{item.name}</Text>
-            <Text style={styles.text}>${item.price}</Text>
+            <Text style={styles.text}>{item.product.name}</Text>
+            <Text style={styles.text}>${item.product.price_unit}</Text>
           </ThemedView>
         ))}
 
         <ThemedText style={styles.text}>
-          Total: ${basket.reduce((acc, item) => acc + item.price_unit, 0).toFixed(2)}
+          Total: ${basket.reduce((acc, item) => acc + item.product.price_unit, 0).toFixed(2)}
         </ThemedText>
 
         <TouchableOpacity style={styles.button} onPress={() => createOrder()}>

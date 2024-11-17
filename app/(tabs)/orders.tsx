@@ -1,5 +1,5 @@
 import React from "react";
-import { FlatList, StyleSheet } from "react-native";
+import { Button, FlatList, StyleSheet, Text } from "react-native";
 
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
@@ -7,7 +7,11 @@ import { getOrders } from "@/services/orders/endpoints";
 import { useQuery } from "@tanstack/react-query";
 
 export default function TabTwoScreen() {
-  const { data: orders } = useQuery({
+  const {
+    data: orders,
+    error,
+    refetch: ordersRefetch,
+  } = useQuery({
     queryKey: [getOrders.name],
     queryFn: getOrders,
   });
@@ -17,6 +21,12 @@ export default function TabTwoScreen() {
       <ThemedView style={styles.titleContainer}>
         <ThemedText type="title">Paid Orders</ThemedText>
       </ThemedView>
+      {error && (
+        <>
+          <Text>We are sorry, our service is currently unavailable.</Text>
+          <Button title="Try again" onPress={() => ordersRefetch()} />
+        </>
+      )}
       <FlatList
         data={orders}
         keyExtractor={(item) => item.id}
