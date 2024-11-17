@@ -1,0 +1,53 @@
+import { kanplaFetch } from "../client";
+
+type PostOrdersData = {
+  total: number;
+};
+
+type PostOrderResponse = {
+  id: string;
+};
+
+export const postOrder = async (data: PostOrdersData) => {
+  const response = await kanplaFetch("orders", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  const order = (await response.json()) as PostOrderResponse;
+
+  return order;
+};
+
+interface PatchOrderData {
+  status: "completed";
+}
+
+export const patchOrder = async (id: string, data: PatchOrderData) => {
+  const response = await kanplaFetch(`orders/${id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+  const order = (await response.json()) as Order;
+
+  return order;
+};
+
+interface Order {
+  id: string;
+  created_at: string;
+  amount: number;
+}
+
+export const getOrders = async () => {
+  const response = await kanplaFetch("orders");
+  const order = (await response.json()) as Order[];
+
+  return order;
+};
